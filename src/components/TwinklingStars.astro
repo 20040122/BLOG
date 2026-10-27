@@ -39,6 +39,8 @@
 <script is:inline>
   // Generate a twinkle star and append it to the galaxy, remove it after animation.
   function generateTwinkleStar() {
+    // Only the dark theme shows the galaxy — don't clone/animate/remove in light mode.
+    if (!document.documentElement.classList.contains("dark")) { return; }
     const twinkleStarTemplate = document.getElementById("twinkle-star")
     if (!twinkleStarTemplate) { return; }
     // Clone the twinkle star template and set its attributes.

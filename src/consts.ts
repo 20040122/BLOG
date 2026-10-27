@@ -15,7 +15,7 @@ export const BLOG: Page = {
 
 // Projects Page 
 export const PROJECTS: Page = {
-  TITLE: "项目",
+  TITLE: "Projects",
   DESCRIPTION: "记录我参与的科研项目。",
 }
 
@@ -28,7 +28,7 @@ export const SEARCH: Page = {
 // Links
 export const LINKS: Links = [
   { 
-    TEXT: "主页", 
+    TEXT: "Home", 
     HREF: "/", 
   },
   { 
@@ -36,7 +36,7 @@ export const LINKS: Links = [
     HREF: "/blog", 
   },
   {
-    TEXT: "项目",
+    TEXT: "Projects",
     HREF: "/projects",
   },
 ]

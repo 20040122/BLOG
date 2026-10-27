@@ -34,12 +34,12 @@ const projects = (await getCollection("projects"))
     <div id='stars3' class='fixed inset-0'></div>
   </div>
 
-  <!-- Dark Theme: Twinkling Stars / Metors -->
-  <div id="galaxy" class="fixed inset-0">
-    <div class="hidden dark:block">
-      <TwinklingStars/>
-      <MeteorShower/>
-    </div>
+  <!-- Dark Theme: Twinkling Stars / Meteors -->
+  <!-- The theme gate lives on #galaxy itself: TwinklingStars appends clones straight
+       into #galaxy, so gating an inner wrapper would leave them running in light mode. -->
+  <div id="galaxy" class="fixed inset-0 hidden dark:block">
+    <TwinklingStars/>
+    <MeteorShower/>
   </div>
 
   <script is:inline src="/js/bg.js"></script>
@@ -70,7 +70,7 @@ const projects = (await getCollection("projects"))
               Blog
             </a>
             <a href='/projects' class='py-2 px-4 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/5 hover:dark:bg-white/15 blend'>
-              项目
+              Projects
             </a>
           </div>
         </div>
@@ -143,10 +143,7 @@ const projects = (await getCollection("projects"))
       <section class="animate">
         <div>
           <p class="font-semibold text-black dark:text-white">
-            Let's Connect
-          </p>
-          <p>
-            Reach out to me via email or on social media.
+            联系方式
           </p>
           <div class="grid grid-cols-4 gap-y-2 mt-4 auto-cols-min">
             {SOCIALS.map(social => (

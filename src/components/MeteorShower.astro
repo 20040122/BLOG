@@ -17,6 +17,8 @@
 
 <script>
   function createMeteor () {
+  // Only the dark theme shows the galaxy — don't create/animate/remove in light mode.
+  if (!document.documentElement.classList.contains("dark")) { return; }
   // create a meteor
   let meteor = document.createElement("div");
   meteor.setAttribute("class", "meteor");

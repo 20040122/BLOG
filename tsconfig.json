@@ -1,14 +1,20 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "strictNullChecks": true,
-    "baseUrl": ".",
+    // Editor/tsc-only aliases. The bundler needs the same map in astro.config.mjs
+    // (vite.resolve.alias) — keep the two in sync. Values are "./"-relative and
+    // baseUrl is deliberately absent: Astro's tsconfig alias sniffing requires
+    // baseUrl, but TypeScript has deprecated it.
+    //
+    // No bare "@*" pattern: it also matches scoped packages like "@astrojs/rss".
     "paths": {
-      "@*": [
-        "src/*"
-      ]
+      "@consts": ["./src/consts.ts"],
+      "@types": ["./src/types.ts"],
+      "@lib/*": ["./src/lib/*"],
+      "@components/*": ["./src/components/*"],
+      "@layouts/*": ["./src/layouts/*"],
+      "@styles/*": ["./src/styles/*"]
     },
-    "jsx": "preserve",
     "jsxImportSource": "solid-js"
   },
   "include": [
