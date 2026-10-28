@@ -81,7 +81,7 @@ sudo ninja install
 
 
 
-# 二、编写Pass流程：
+# 二、编写Pass流程
 
 **1.首先明确路径关系**
 
@@ -158,7 +158,7 @@ ninja FunctionCount
 
 
 
-# 三、验证pass：
+# 三、验证pass
 
 **1.准备test.c文件**
 
