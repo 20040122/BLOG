@@ -73,6 +73,22 @@ article {
   @apply prose dark:prose-invert max-w-full pb-12;
 }
 
+article :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 5rem; /* = toc.js TOC_OFFSET: header h-16 + 16px */
+}
+
+#article-toc a.toc-active {
+  @apply text-black dark:text-white;
+}
+
+#toc-progress {
+  /* █ (U+2588) and ░ (U+2591) must come from ONE font: the default mono
+     stack splits them across fonts on Windows (Consolas has █ but not ░),
+     which vertically misaligns the read and unread segments. These fonts
+     all cover the Block Elements range with matching metrics. */
+  font-family: "Cascadia Mono", "Menlo", "DejaVu Sans Mono", "Segoe UI Symbol", monospace;
+}
+
 .page-heading {
   @apply font-semibold text-black dark:text-white;
 }
