@@ -1,4 +1,4 @@
-import type { Site, Page, Links, Socials } from "@types"
+import type { Site, Page, Links, Socials, Friends } from "@types"
 
 // Global
 export const SITE: Site = {
@@ -25,19 +25,51 @@ export const SEARCH: Page = {
   DESCRIPTION: "按关键字搜索所有文章和项目。",
 }
 
+// Mates Page
+export const MATES: Page = {
+  TITLE: "Mates",
+  DESCRIPTION: "友链存放处，欢迎朋友们来串门。",
+}
+
+// Friends
+export const FRIENDS: Friends = [
+  {
+    NAME: "XenWayne's Blog",
+    HREF: "https://xenwayne.top/",
+    AVATAR: "https://gcore.jsdelivr.net/gh/XenWayne/sitefile/img/avatar.webp",
+    DESCR: "寸进具欢喜，万物皆可爱。",
+  },
+  {
+    NAME: "e哥の自我修养",
+    HREF: "https://alexanderqwq.top/",
+    AVATAR: "https://s21.ax1x.com/2024/10/09/pAJZTn1.jpg",
+    DESCR: "e哥の自我修养",
+  },
+  {
+    NAME: "Kuaimiaoda's Blog",
+    HREF: "https://kuaimiaoda.cn/",
+    AVATAR: "https://gcore.jsdelivr.net/gh/kuaimiaoda/random-menu/xxx/asus/202410261937471.webp",
+    DESCR: "Kuaimiaoda's Blog",
+  },
+]
+
 // Links
 export const LINKS: Links = [
-  { 
-    TEXT: "Home", 
-    HREF: "/", 
+  {
+    TEXT: "Home",
+    HREF: "/",
   },
-  { 
-    TEXT: "Blog", 
-    HREF: "/blog", 
+  {
+    TEXT: "Blog",
+    HREF: "/blog",
   },
   {
     TEXT: "Projects",
     HREF: "/projects",
+  },
+  {
+    TEXT: "Mates",
+    HREF: "/mates",
   },
 ]
 

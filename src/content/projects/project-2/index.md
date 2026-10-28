@@ -1,16 +1,12 @@
 ---
-title: "Project One"
-summary: "Lorem ipsum dolor sit amet"
-date: "Mar 18 2022"
+title: "AI-SCADA"
+summary: "工业组态布局工具"
+date: "2026-08-20"
 draft: false
 tags:
-- Astro
-- Javascript
-- Typescript
-- Tailwind
-- SolidJs
-demoUrl: https://astro-sphere-demo.vercel.app
-repoUrl: https://github.com/markhorn-dev/astro-sphere
+- LLM
+- Prompt
+repoUrl: https://github.com/20040122/AI_SCADA
 ---
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Vitae ultricies leo integer malesuada nunc vel risus commodo viverra. Adipiscing enim eu turpis egestas pretium. Euismod elementum nisi quis eleifend quam adipiscing. In hac habitasse platea dictumst vestibulum. Sagittis purus sit amet volutpat. Netus et malesuada fames ac turpis egestas. Eget magna fermentum iaculis eu non diam phasellus vestibulum lorem. Varius sit amet mattis vulputate enim. Habitasse platea dictumst quisque sagittis. Integer quis auctor elit sed vulputate mi. Dictumst quisque sagittis purus sit amet.
+AI-SCADA 是一个面向 SCADA（监控与数据采集）系统智能化组态设计的 AI 辅助开发项目，旨在利用智能 Agent 提升工业监控界面的自动生成与配置效率。项目围绕 SCADA 组态流程提供规则校验、控件检索、布局生成、控件微调和绑点生成等核心能力，可根据业务需求完成界面控件选择与布局，并辅助建立控件与实际监测数据点之间的绑定关系，从而减少传统 SCADA 系统中大量依赖人工完成的界面设计与配置工作；项目采用前后端分离结构，并包含模型、布局、数据及测试等模块，为进一步构建基于 AI Agent 的智能 SCADA 组态系统提供了完整的工程基础。
