@@ -19,7 +19,7 @@ Both `package-lock.json` and `pnpm-lock.yaml` are present; npm is the actively u
 
 ## Architecture
 
-**Config & types** — `src/consts.ts` is the single site configuration (SITE, per-page titles, nav LINKS, SOCIALS); its types live in `src/types.ts`. Content schemas (Zod) are in `src/content/config.ts`.
+**Config & types** — `src/consts.ts` is the single site configuration (SITE, per-page titles, nav LINKS, SOCIALS, friend-links FRIENDS); its types live in `src/types.ts`. Content schemas (Zod) are in `src/content/config.ts`.
 
 **Path aliases** — `@consts`, `@types`, `@lib`, `@components`, `@layouts`, `@styles` are declared twice and must be kept in sync: `compilerOptions.paths` in `tsconfig.json` (tsc/language service only) and `vite.resolve.alias` in `astro.config.mjs` (bundler). There is deliberately no bare `@*` wildcard — it would also match scoped packages like `@astrojs/*`.
 
@@ -27,11 +27,13 @@ Both `package-lock.json` and `pnpm-lock.yaml` are present; npm is the actively u
 
 **Draft gotcha** — `draft: true` filters entries out of list pages, search, and the article prev/next nav, but `getStaticPaths` in the `[...slug].astro` detail routes does **not** filter drafts, so draft pages are still built.
 
-**Page composition** — every page wraps content in `PageLayout` (HTML shell: `BaseHead` + `Header` + `Drawer` + `Footer`), then `TopLayout` + `BottomLayout` (both just `Container` wrappers). Blog/project detail pages instead use `ArticleTopLayout` / `ArticleBottomLayout`, which render entry metadata and compute prev/next links (modulo-wrapped around the sorted collection).
+**Page composition** — every page wraps content in `PageLayout` (HTML shell: `BaseHead` + `Header` + `Drawer` + `Footer`), then `TopLayout` + `BottomLayout` (both just `Container` wrappers). Blog/project detail pages instead use `ArticleTopLayout` / `ArticleBottomLayout`, which render entry metadata and compute prev/next links (modulo-wrapped around the sorted collection). `/mates` is a plain static friend-links page rendered entirely from `FRIENDS` in consts — no content collection.
 
-**Search (SolidJS islands)** — `SearchCollection.tsx` (blog & projects list pages) is a `client:load` island with Fuse.js fuzzy search over slug/title/summary/tags, plus tag filtering and a sort toggle. `Search.tsx` (`/search` page) is a simpler query-only variant. Both cast all entries to `CollectionEntry<"blog">` regardless of source collection — preserve that shape when editing.
+**Article TOC (blog only)** — `ArticleBottomLayout` renders `ArticleToc.astro` for blog entries only (not projects): a tree-style table of contents from the entry's headings, plus an ASCII reading-progress bar. It conditionally loads `public/js/toc.js` (scroll-spy + progress) itself. The `TOC_OFFSET` (80px) constant in `toc.js` is coupled with the `scroll-margin-top: 5rem` rule in `src/styles/global.css` — change them together.
 
-**Client scripts** — plain JS in `public/js/`. Loaded as inline scripts from `BaseHead.astro`: `theme.js` (class-based dark mode on `<html>`, persisted in `localStorage.theme`, wired to header/drawer buttons), `animate.js` (staggered reveal of `.animate` elements), `scroll.js` (header scrolled state), `copy.js` (code-block copy buttons). Exception: `bg.js` (homepage particle/star background) is loaded only by `src/pages/index.astro`. The scripts listen for `astro:after-swap` events; the ViewTransitions component in `BaseHead.astro` is currently commented out.
+**Search (SolidJS islands)** — `SearchCollection.tsx` (blog & projects list pages) is a `client:load` island with Fuse.js fuzzy search over slug/title/summary/tags, plus tag filtering and a sort toggle. `Search.tsx` (`/search` page) is a simpler query-only variant. Both share the `SearchBar.tsx` input component and cast all entries to `CollectionEntry<"blog">` regardless of source collection — preserve that shape when editing.
+
+**Client scripts** — plain JS in `public/js/`. Loaded as inline scripts from `BaseHead.astro`: `theme.js` (class-based dark mode on `<html>`, persisted in `localStorage.theme`, wired to header/drawer buttons), `animate.js` (staggered reveal of `.animate` elements), `scroll.js` (header scrolled state), `copy.js` (code-block copy buttons). Two are loaded elsewhere: `bg.js` (homepage particle/star background) only by `src/pages/index.astro`, and `toc.js` only by `ArticleToc.astro`. The scripts listen for `astro:after-swap` events; the ViewTransitions component in `BaseHead.astro` is currently commented out.
 
 **Homepage backgrounds** — `src/pages/index.astro` renders light-mode particle layers and dark-mode star layers, plus `TwinklingStars`/`MeteorShower` inside `#galaxy`, all driven by `bg.js`. The dark-only gate lives on `#galaxy` itself (TwinklingStars appends clones directly into it), so dark-mode animations don't run under the light theme.
 
