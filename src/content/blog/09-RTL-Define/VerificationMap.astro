@@ -1,0 +1,101 @@
+---
+const branches = [
+  {
+    title: "LLM / Agent",
+    items: [
+      {
+        name: "Verification Agent",
+        description: "规划验证任务并调用 Simulator、Formal Tool 等工具。",
+      },
+      {
+        name: "RTL Debug & Repair",
+        description: "分析代码、Log、Waveform，并定位与修复 RTL Bug。",
+      },
+    ],
+  },
+  {
+    title: "Testing",
+    items: [
+      {
+        name: "Hardware Fuzzing",
+        description: "通过 Coverage Feedback 自动探索新的硬件状态。",
+      },
+      {
+        name: "Coverage Guidance",
+        description: "利用 Coverage Metric 引导测试生成。",
+      },
+    ],
+  },
+  {
+    title: "Formal",
+    items: [
+      {
+        name: "Assertion Generation",
+        description: "从 Specification 自动生成 SVA / Formal Property。",
+      },
+      {
+        name: "Formal Tool Interaction",
+        description: "Agent 自动调用 Formal Tool 并解析 Counterexample。",
+      },
+    ],
+  },
+]
+---
+
+<div class="not-prose my-8">
+  <div
+    class="rounded-xl border border-black/10 p-5 dark:border-white/10"
+  >
+    <header class="mb-6 text-center">
+      <div class="text-lg font-semibold">
+        AI for Chip Verification
+      </div>
+
+      <p class="mt-1 text-sm opacity-60">
+        From AI-assisted verification to autonomous verification
+      </p>
+    </header>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      {
+        branches.map((branch) => (
+          <section
+            class="rounded-xl border border-black/10 p-4 dark:border-white/10"
+          >
+            <h3 class="m-0 mb-4 text-center text-base font-semibold">
+              {branch.title}
+            </h3>
+
+            <div class="space-y-3">
+              {
+                branch.items.map((item) => (
+                  <details
+                    class="rounded-lg border border-black/10 p-3 dark:border-white/10"
+                  >
+                    <summary class="cursor-pointer text-sm font-medium">
+                      {item.name}
+                    </summary>
+
+                    <p class="mb-0 mt-3 text-sm leading-6 opacity-70">
+                      {item.description}
+                    </p>
+                  </details>
+                ))
+              }
+            </div>
+          </section>
+        ))
+      }
+    </div>
+
+    <div class="my-5 text-center opacity-40">
+      ↓
+    </div>
+
+    <div
+      class="rounded-xl border border-black/10 p-4 text-center font-semibold dark:border-white/10"
+    >
+      Autonomous Verification
+    </div>
+  </div>
+</div>

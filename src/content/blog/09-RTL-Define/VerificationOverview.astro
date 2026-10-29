@@ -1,0 +1,71 @@
+---
+const items = [
+  {
+    title: "LLM for RTL Verification",
+    tech: "LLM、Agent、RAG、代码生成",
+    score: 5,
+  },
+  {
+    title: "自动生成 Testbench / Assertion",
+    tech: "测试生成、程序合成",
+    score: 5,
+  },
+  {
+    title: "RTL Bug Detection / Localization",
+    tech: "缺陷检测、故障定位",
+    score: 5,
+  },
+  {
+    title: "Coverage-Driven Verification",
+    tech: "搜索、测试优化、Fuzzing",
+    score: 4,
+  },
+  {
+    title: "Hardware Fuzzing",
+    tech: "Software Fuzzing",
+    score: 5,
+  },
+  {
+    title: "Verification Agent",
+    tech: "Agent、工具调用、规划",
+    score: 5,
+  },
+  {
+    title: "RTL Code Intelligence",
+    tech: "Code LLM、静态分析",
+    score: 4,
+  },
+]
+---
+
+<div class="not-prose my-8 grid gap-3">
+  {
+    items.map((item) => (
+      <div
+        class="rounded-xl border border-black/10 p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10"
+      >
+        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h3 class="m-0 text-base font-semibold">
+              {item.title}
+            </h3>
+
+            <p class="mt-1 text-sm opacity-70">
+              {item.tech}
+            </p>
+          </div>
+
+          <div
+            class="shrink-0 text-sm"
+            aria-label={`匹配度 ${item.score} / 5`}
+          >
+            {"★".repeat(item.score)}
+            <span class="opacity-20">
+              {"★".repeat(5 - item.score)}
+            </span>
+          </div>
+        </div>
+      </div>
+    ))
+  }
+</div>

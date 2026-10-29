@@ -1,0 +1,70 @@
+---
+const steps = [
+  {
+    title: "RTL / CPU",
+    description: "被验证的硬件设计，例如 CPU Core、RTL Module。",
+  },
+  {
+    title: "Hardware Fuzzer",
+    description: "根据反馈自动生成新的测试输入。",
+  },
+  {
+    title: "Instruction / Transaction Generation",
+    description: "生成指令、总线事务或输入序列。",
+  },
+  {
+    title: "Simulation",
+    description: "运行 RTL Simulation 执行测试。",
+  },
+  {
+    title: "Coverage / Assertion Failure",
+    description: "利用 Coverage 和 Assertion Failure 形成反馈。",
+  },
+]
+---
+
+<div class="not-prose my-8">
+  <div
+    class="rounded-xl border border-black/10 p-5 dark:border-white/10"
+  >
+    <div class="mb-5">
+      <div class="text-base font-semibold">
+        Hardware Fuzzing Loop
+      </div>
+
+      <div class="mt-1 text-sm opacity-60">
+        Coverage-guided feedback loop
+      </div>
+    </div>
+
+    <div class="flex flex-col items-center">
+      {
+        steps.map((step, index) => (
+          <>
+            <details
+              class="w-full rounded-lg border border-black/10 px-4 py-3 dark:border-white/10"
+            >
+              <summary class="cursor-pointer font-medium">
+                {step.title}
+              </summary>
+
+              <p class="mb-0 mt-3 text-sm leading-6 opacity-70">
+                {step.description}
+              </p>
+            </details>
+
+            {index !== steps.length - 1 && (
+              <div class="py-2 opacity-40">
+                ↓
+              </div>
+            )}
+          </>
+        ))
+      }
+
+      <div class="mt-4 text-center text-xs opacity-50">
+        ↑ Feedback drives the next generation
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,85 @@
+---
+const inputs = [
+  {
+    name: "RTL",
+    description: "待分析的 SystemVerilog / Verilog 源代码。",
+  },
+  {
+    name: "Waveform",
+    description: "Simulation 中的 Signal Trace，例如 VCD / FST。",
+  },
+  {
+    name: "Simulation Log",
+    description: "Simulator 输出、错误信息和 Test Failure。",
+  },
+  {
+    name: "Assertions",
+    description: "失败的 Assertion 以及对应 Property。",
+  },
+]
+
+const pipeline = [
+  "Multimodal / Verification Agent",
+  "Bug Localization",
+  "Patch Generation",
+  "Regression Verification",
+]
+---
+
+<div class="not-prose my-8">
+  <div
+    class="rounded-xl border border-black/10 p-5 dark:border-white/10"
+  >
+    <div class="mb-5">
+      <div class="font-semibold">
+        RTL Bug Localization & Repair
+      </div>
+
+      <div class="mt-1 text-sm opacity-60">
+        Multi-source debugging pipeline
+      </div>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      {
+        inputs.map((input) => (
+          <details
+            class="rounded-lg border border-black/10 p-4 dark:border-white/10"
+          >
+            <summary class="cursor-pointer font-medium">
+              {input.name}
+            </summary>
+
+            <p class="mb-0 mt-3 text-sm leading-6 opacity-70">
+              {input.description}
+            </p>
+          </details>
+        ))
+      }
+    </div>
+
+    <div class="my-4 text-center opacity-40">
+      ↓
+    </div>
+
+    <div class="flex flex-col items-center">
+      {
+        pipeline.map((step, index) => (
+          <>
+            <div
+              class="w-full rounded-lg border border-black/10 px-4 py-3 text-center text-sm font-medium dark:border-white/10"
+            >
+              {step}
+            </div>
+
+            {index !== pipeline.length - 1 && (
+              <div class="py-2 opacity-40">
+                ↓
+              </div>
+            )}
+          </>
+        ))
+      }
+    </div>
+  </div>
+</div>

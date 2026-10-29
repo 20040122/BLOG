@@ -1,0 +1,85 @@
+---
+const traditional = [
+  "Specification",
+  "RTL Design",
+  "Testbench",
+  "Simulation",
+  "Bug / Coverage",
+  "人工分析",
+  "修改 RTL / Test",
+]
+
+const agent = [
+  "Specification",
+  "Verification Agent",
+  "TB / Assertion / Test Generation",
+  "Simulator / Formal Tools",
+  "Coverage + Logs",
+  "Agent Analysis",
+  "Bug Localization / Repair",
+]
+---
+
+<div class="not-prose my-8 grid gap-4 md:grid-cols-2">
+  <details
+    class="group rounded-xl border border-black/10 p-5 dark:border-white/10"
+    open
+  >
+    <summary
+      class="cursor-pointer list-none font-semibold"
+    >
+      Traditional Verification
+    </summary>
+
+    <div class="mt-5 flex flex-col items-center">
+      {
+        traditional.map((step, index) => (
+          <>
+            <div
+              class="w-full rounded-lg border border-black/10 px-4 py-3 text-center text-sm dark:border-white/10"
+            >
+              {step}
+            </div>
+
+            {index !== traditional.length - 1 && (
+              <div class="py-2 text-sm opacity-40">
+                ↓
+              </div>
+            )}
+          </>
+        ))
+      }
+    </div>
+  </details>
+
+  <details
+    class="group rounded-xl border border-black/10 p-5 dark:border-white/10"
+    open
+  >
+    <summary
+      class="cursor-pointer list-none font-semibold"
+    >
+      Agent Verification
+    </summary>
+
+    <div class="mt-5 flex flex-col items-center">
+      {
+        agent.map((step, index) => (
+          <>
+            <div
+              class="w-full rounded-lg border border-black/10 px-4 py-3 text-center text-sm dark:border-white/10"
+            >
+              {step}
+            </div>
+
+            {index !== agent.length - 1 && (
+              <div class="py-2 text-sm opacity-40">
+                ↓
+              </div>
+            )}
+          </>
+        ))
+      }
+    </div>
+  </details>
+</div>
