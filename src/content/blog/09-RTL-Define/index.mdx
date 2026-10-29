@@ -20,7 +20,7 @@ import VerificationMap from "./VerificationMap.astro"
 <VerificationOverview />
 
 - DUT（.sv/被测模块）：
-```systemverilog
+```system-verilog
 module adder (
     input  logic [7:0] a,
     input  logic [7:0] b,
@@ -32,7 +32,7 @@ assign sum = a + b;
 endmodule
 ```
 - Testbench（.sv/测试平台）:
-```systemverilog
+```system-verilog
 module tb_adder;
 
 logic [7:0] a, b;
