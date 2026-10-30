@@ -1,0 +1,136 @@
+---
+interface Props {
+  title: string;
+  venue?: string;
+  year?: string | number;
+  authors?: string;
+  image?: string;
+  paper?: string;
+  code?: string;
+  arxiv?: string;
+  description?: string;
+}
+
+const {
+  title,
+  venue,
+  year,
+  authors,
+  image,
+  paper,
+  code,
+  arxiv,
+  description,
+} = Astro.props;
+---
+
+<div class="not-prose my-8 overflow-hidden rounded-xl border border-black/10
+            bg-white/50 transition-colors
+            dark:border-white/10 dark:bg-white/[0.03]">
+
+  <div class="grid gap-0 md:grid-cols-[370px_1fr]">
+
+    {
+      image && (
+        <div class="overflow-hidden bg-black/5 dark:bg-white/5">
+          <a
+            href={image}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block h-full min-h-[200px]"
+          >
+            <img
+              src={image}
+              alt={`${title} architecture`}
+              class="h-full w-full object-contain"
+              loading="lazy"
+            />
+          </a>
+        </div>
+      )
+    }
+
+    <div class="flex flex-col p-5">
+
+      <h3 class="m-0 text-lg font-semibold tracking-tight">
+        {title}
+      </h3>
+
+      {
+        (venue || year) && (
+          <div class="mt-2 text-sm font-medium opacity-70">
+            {venue}
+            {venue && year && <span> · </span>}
+            {year}
+          </div>
+        )
+      }
+
+      {
+        authors && (
+          <div class="mt-1 text-sm opacity-60">
+            {authors}
+          </div>
+        )
+      }
+
+      {
+        description && (
+          <p class="mt-3 text-sm leading-relaxed opacity-80">
+            {description}
+          </p>
+        )
+      }
+
+      <div class="mt-auto flex flex-wrap gap-2 pt-4">
+
+        {
+          paper && (
+            <a
+              href={paper}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-md border px-3 py-1.5 text-sm no-underline
+                     transition hover:bg-black/5
+                     dark:hover:bg-white/10"
+            >
+              Paper ↗
+            </a>
+          )
+        }
+
+        {
+          arxiv && (
+            <a
+              href={arxiv}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-md border px-3 py-1.5 text-sm no-underline
+                     transition hover:bg-black/5
+                     dark:hover:bg-white/10"
+            >
+              arXiv ↗
+            </a>
+          )
+        }
+
+        {
+          code && (
+            <a
+              href={code}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-md border px-3 py-1.5 text-sm no-underline
+                     transition hover:bg-black/5
+                     dark:hover:bg-white/10"
+            >
+              Code ↗
+            </a>
+          )
+        }
+
+      </div>
+    </div>
+
+  </div>
+</div>
