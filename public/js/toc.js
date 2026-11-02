@@ -32,6 +32,21 @@ function tocUpdate() {
     const heading = document.getElementById(slug)
     if (heading && heading.getBoundingClientRect().top <= TOC_OFFSET + 8) activeSlug = slug
   }
+  // Auto-expand ancestors of the section being read (only when it changes,
+  // so manual collapsing is respected while scrolling within a section).
+  if (activeSlug !== tocLastActive) {
+    tocLastActive = activeSlug
+    // Keep only the current section's path open; finished sections collapse.
+    tocOpen.clear()
+    let p = activeSlug ? tocLink(activeSlug) : null
+    if (p && p.getAttribute("data-has-children") === "1") tocOpen.add(activeSlug)
+    p = p && tocLink(p.getAttribute("data-parent"))
+    while (p) {
+      tocOpen.add(p.getAttribute("data-slug"))
+      p = tocLink(p.getAttribute("data-parent"))
+    }
+  }
+  tocApplyFold(links)
   for (const link of links) {
     const on = link.getAttribute("data-slug") === activeSlug
     link.classList.toggle("toc-active", on)
@@ -41,7 +56,44 @@ function tocUpdate() {
   }
 }
 
+const tocOpen = new Set()
+let tocLastActive = null
+
+function tocLink(slug) {
+  if (!slug) return null
+  for (const l of document.querySelectorAll("#article-toc a[data-slug]")) {
+    if (l.getAttribute("data-slug") === slug) return l
+  }
+  return null
+}
+
+// A row is visible when every ancestor is open; toggle glyph reflects state.
+function tocApplyFold(links) {
+  const parentOf = {}
+  for (const l of links) parentOf[l.getAttribute("data-slug")] = l.getAttribute("data-parent")
+  for (const l of links) {
+    let visible = true
+    let p = parentOf[l.getAttribute("data-slug")]
+    while (p) {
+      if (!tocOpen.has(p)) { visible = false; break }
+      p = parentOf[p]
+    }
+    l.style.display = visible ? "" : "none"
+    const t = l.querySelector(".toc-toggle")
+    if (t) t.textContent = tocOpen.has(l.getAttribute("data-slug")) ? "▾" : "▸"
+  }
+}
+
 function tocClick(e) {
+  const toggle = e.target && e.target.closest ? e.target.closest("#article-toc .toc-toggle") : null
+  if (toggle) {
+    e.preventDefault()
+    const slug = toggle.closest("a[data-slug]").getAttribute("data-slug")
+    if (tocOpen.has(slug)) tocOpen.delete(slug)
+    else tocOpen.add(slug)
+    tocApplyFold(document.querySelectorAll("#article-toc a[data-slug]"))
+    return
+  }
   const link = e.target && e.target.closest ? e.target.closest("#article-toc a[data-slug]") : null
   if (!link) return
   const slug = link.getAttribute("data-slug")

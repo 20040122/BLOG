@@ -22,7 +22,7 @@ const BAR_CELLS = 20
     <div class="select-none mb-1">TREE</div>
     <nav class="overflow-y-auto min-h-0">
       {lines.map(line => (
-        <a href={`#${line.slug}`} data-slug={line.slug} data-conn={line.connector} class="block whitespace-pre overflow-hidden text-ellipsis hover:text-black dark:hover:text-white transition-colors duration-200">{line.prefix}<span class="toc-conn">{line.connector}</span>{" " + line.text}</a>
+        <a href={`#${line.slug}`} data-slug={line.slug} data-conn={line.connector} data-parent={line.parent} data-has-children={line.hasChildren ? "1" : "0"} style={line.parent ? "display:none" : undefined} class="block whitespace-pre overflow-hidden text-ellipsis hover:text-black dark:hover:text-white transition-colors duration-200">{line.prefix}<span class="toc-conn">{line.connector}</span>{line.hasChildren ? <span class="toc-toggle cursor-pointer select-none hover:text-black dark:hover:text-white">▸</span> : " "}{" " + line.text}</a>
       ))}
     </nav>
     <div id="toc-progress" class="mt-2 shrink-0 whitespace-pre select-none">{"░".repeat(BAR_CELLS) + " 0%"}</div>

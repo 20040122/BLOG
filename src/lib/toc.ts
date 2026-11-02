@@ -6,6 +6,8 @@ export type TocLine = {
   prefix: string    // "│  " / "   " per ancestor level
   connector: string // "├─" | "└─"
   depth: number     // normalized, 0-based
+  parent: string    // parent slug or ""
+  hasChildren: boolean
 }
 
 type TocNode = {
@@ -33,7 +35,7 @@ export function buildTocTree(headings: MarkdownHeading[]): TocLine[] {
   }
 
   const lines: TocLine[] = []
-  const walk = (nodes: TocNode[], prefix: string) => {
+  const walk = (nodes: TocNode[], prefix: string, parent: string) => {
     nodes.forEach((node, i) => {
       const isLast = i === nodes.length - 1
       lines.push({
@@ -41,11 +43,13 @@ export function buildTocTree(headings: MarkdownHeading[]): TocLine[] {
         text: node.h.text,
         prefix,
         connector: isLast ? "└─" : "├─",
-        depth: node.rel
+        depth: node.rel,
+        parent,
+        hasChildren: node.children.length > 0
       })
-      walk(node.children, prefix + (isLast ? "   " : "│  "))
+      walk(node.children, prefix + (isLast ? "   " : "│  "), node.h.slug)
     })
   }
-  walk(root, "")
+  walk(root, "", "")
   return lines
 }

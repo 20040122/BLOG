@@ -33,19 +33,14 @@ const {
     {
       image && (
         <div class="overflow-hidden bg-black/5 dark:bg-white/5">
-          <a
-            href={image}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="block h-full min-h-[200px]"
-          >
+          <button type="button" data-zoom-src={image} data-zoom-alt={`${title} architecture`} aria-label="Zoom image" class="block h-full min-h-[200px] w-full cursor-zoom-in border-0 bg-transparent p-0">
             <img
               src={image}
               alt={`${title} architecture`}
               class="h-full w-full object-contain"
               loading="lazy"
             />
-          </a>
+          </button>
         </div>
       )
     }
@@ -134,3 +129,31 @@ const {
 
   </div>
 </div>
+
+<script is:inline>
+  if (!window.__zoomInit) {
+    window.__zoomInit = true;
+    document.addEventListener("click", function (e) {
+      var b = e.target.closest && e.target.closest("[data-zoom-src]");
+      if (!b) return;
+      var dlg = document.getElementById("img-lightbox");
+      if (!dlg) {
+        dlg = document.createElement("dialog");
+        dlg.id = "img-lightbox";
+        dlg.style.cssText = "padding:0;border:0;background:transparent;max-width:none;max-height:none;overflow:visible";
+        var img = document.createElement("img");
+        img.style.cssText = "max-width:92vw;max-height:92vh;object-fit:contain;background:#fff;border-radius:8px;cursor:zoom-out;display:block";
+        dlg.appendChild(img);
+        dlg.addEventListener("click", function () { dlg.close(); });
+        var st = document.createElement("style");
+        st.textContent = "#img-lightbox::backdrop{background:rgba(0,0,0,.8)}";
+        document.head.appendChild(st);
+        document.body.appendChild(dlg);
+      }
+      var im = dlg.querySelector("img");
+      im.src = b.getAttribute("data-zoom-src");
+      im.alt = b.getAttribute("data-zoom-alt") || "";
+      dlg.showModal();
+    });
+  }
+</script>
