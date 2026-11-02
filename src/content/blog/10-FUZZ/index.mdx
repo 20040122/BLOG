@@ -8,6 +8,73 @@ tags:
 ---
 
 import PaperCard from "@components/PaperCard.astro";
+import PaperTimeline from "@components/PaperTimeline.astro";
+
+# 论文时间轴
+
+下面按时间顺序梳理五篇工作：从 RFUZZ 将覆盖引导模糊测试引入 RTL，到 DifuzzRTL 的差分检查与 Cascade 的复杂程序生成，再到 TurboFuzz、Lyra 把整个模糊测试闭环搬上 FPGA。
+
+<PaperTimeline
+  papers={[
+    {
+      year: 2018,
+      venue: "ICCAD",
+      title: "RFUZZ: Coverage-Directed Fuzz Testing of RTL on FPGAs",
+      authors:
+        "Kevin Laeufer, Jack Koenig, Donggyu Kim, Jonathan Bachrach, Koushik Sen",
+      tag: "覆盖引导",
+      description:
+        "将 AFL 式的覆盖引导变异模糊测试引入 RTL：以综合后 IR 中每个 2:1 多路选择器的 select 信号作为覆盖点，并用 FPGA 加速测试执行。",
+      paper: "https://doi.org/10.1145/3240765.3240842",
+    },
+    {
+      year: 2021,
+      venue: "S&P",
+      title: "DifuzzRTL: Differential Fuzz Testing to Find CPU Bugs",
+      authors:
+        "Jaewon Hur, Suhwan Song, Dongup Kwon, Eunjin Baek, Jangwoo Kim, Byoungyoung Lee",
+      tag: "差分测试",
+      description:
+        "以寄存器覆盖逐周期刻画 FSM 状态转移，并用 ISA 模拟器作为黄金模型做差分检查，在 OpenRISC、Rocket 与 BOOM 上发现 16 个新 bug。",
+      paper: "https://doi.org/10.1109/SP40001.2021.00103",
+    },
+    {
+      year: 2024,
+      venue: "USENIX Security",
+      title: "Cascade: CPU Fuzzing via Intricate Program Generation",
+      authors: "Flavien Solt, Katharina Ceesay-Seitz, Kaveh Razavi",
+      tag: "程序生成",
+      description:
+        "生成任意长度、控制流与数据流相互纠缠的合法 RISC-V 程序，利用触发 bug 时的非终止行为在程序粒度零开销检测缺陷，共发现 37 个新 bug。",
+      paper: "https://www.usenix.org/conference/usenixsecurity24/presentation/solt",
+    },
+    {
+      year: 2026,
+      venue: "HPCA",
+      title:
+        "TurboFuzz: FPGA Accelerated Hardware Fuzzing for Processor Agile Verification",
+      authors:
+        "Yang Zhong, Haoran Wu, Xueqi Li, Sa Wang, David Boland, Yungang Bao, Kan Shi",
+      tag: "FPGA 加速",
+      description:
+        "把测试生成、仿真与覆盖反馈的整个闭环放进单块 FPGA，消除主机与加速器之间的通信开销，最高取得 2.23× 覆盖与 571× 找 bug 加速。",
+      paper: "https://arxiv.org/abs/2509.10400",
+    },
+    {
+      year: 2026,
+      venue: "DAC",
+      title:
+        "Lyra: A Hardware-Accelerated RISC-V Verification Framework with Generative Model-Based Processor Fuzzing",
+      authors:
+        "Juncheng Huo, Yunfan Gao, Xinxin Liu, Sa Wang, Yungang Bao, Xitong Gao, Kan Shi",
+      tag: "生成模型",
+      description:
+        "让 DUT 与参考模型在 FPGA 上异构并行执行，并用基于 924 万条〈指令, 覆盖〉样本训练的生成模型 LyraGen 产生语义丰富的 RISC-V 指令序列。",
+      paper: "https://doi.org/10.1145/3770743.3803956",
+      arxiv: "https://arxiv.org/abs/2512.13686",
+    },
+  ]}
+/>
 
 # RFUZZ
 
