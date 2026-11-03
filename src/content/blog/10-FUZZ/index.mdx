@@ -76,7 +76,7 @@ import PaperTimeline from "@components/PaperTimeline.astro";
   ]}
 />
 
-# RFUZZ
+# RFUZZ（测试用例为字节数组）
 
 <PaperCard
   title="RFUZZ: Coverage-directed fuzz testing of RTL on FPGAs"
@@ -109,4 +109,58 @@ import PaperTimeline from "@components/PaperTimeline.astro";
 2. 加一条 metaReset 线，一拍把全部寄存器清零、把内存换成“默认读 0 的稀疏记录表”，清 valid 位即复位，把内存换成“默认读 0 的稀疏记录表”，清 valid 位即复位。
 
 3. 把覆盖定义在**综合后的、HDL 无关的中间表示（IR）**上，把**每一个 2:1 多路选择器的 select 信号**当作一个独立覆盖点。在一次 test 中，该条件既取到 true、又取到 false，才算完全覆盖。
+
+# DifuzzRTL（测试用例为SimInput指令流）
+
+<PaperCard
+  title="DIFUZZRTL: Differential Fuzz Testing to Find  CPU Bugs"
+  venue="S&P"
+  year={2021}
+  authors="Jaewon Hur, Suhwan Song, Dongup Kwon, Eunjin Baek, Jangwoo Kim, Byoungyoung Lee"
+  image="https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261103161948644.png"
+  paper="https://ieeexplore.ieee.org/abstract/document/9519470"
+/>
+
+## 问题
+
+如何自动地、可扩展地在真实 CPU 的 RTL 设计中找出未知的安全与语义缺陷。论文的出发点是 RTL 本质上是规模极其庞大的有限状态机（FSM）；静态或动态方法虽然都被尝试过，但由于 FSM 状态数爆炸，“问题仍是未解决的”，因此作者把目标定为尽可能多地探索 FSM 状态。
+
+- **缺少适合 RTL 的执行覆盖率度量。**  当时最先进的 RTL fuzzer 是 RFuzz 的 mux coverage，用 mux 的 select 信号是否翻转来近似状态转移。有两个致命缺陷：其一，该指标是时钟不敏感的，不区分不同 cycle 上的翻转事件，因而会把语义上不同的状态合并成一个（内存控制器例子：良性输入与触发 bug 的输入产生完全相同的 mux coverage map）；其二，为每个 mux 的 select 信号插桩，所需的连线和寄存器资源随 mux 数量近似平方增长，造成严重的运行时与可扩展性问题 。
+- **CPU 的输入空间不是一维的。**  软件 fuzzing 通常假设单维输入（文件、系统调用），但 CPU RTL 每个时钟周期都接收来自内存控制器、中断控制器等多个来源的总线包；若把整个 SoC 一起 fuzz，输入空间就被限制在“SoC 能生成什么”之内，无法压力测试缓存一致性事务、任意中断等行为 。
+- **语义 bug 的判定（oracle）问题。**  CPU 的 bug 多数不表现为内存越界，而是“偏离 ISA 规定的行为”，很难写成安全违规条件；需要与一个黄金模型对比才能定性 。
+
+## 方法
+
+**覆盖率引导的差分模糊测试：**同一份输入同时喂给 RTL 仿真和 ISA 仿真器（黄金模型），跑完后比较两者的最终内存与架构寄存器快照，不一致就报为候选 bug，并在每轮迭代中重置设计。
+
+**怎么造输入、怎么判断这轮输入有价值、怎么判断跑出来是 bug？**
+
+1. 把“内存地址→指令/数据”的映射和“绑定在某个 PC 上的中断事件”打包成统一格式 SimInput，先按语法随机变异 opcode 与操作数、随机增删中断，再沿解释执行得到的真实控制流把剩余地址与数值填满。
+2. 怎么判断这轮输入有价值：每拍把所有控制寄存器哈希成一个状态指纹、写进 covmap，只有该槽位从 0 变 1（即踩到从未见过的状态）才把这条输入存进种子池继续变异。
+3. 同一份 SimInput 同时喂给 RTL 仿真与 ISA 黄金模型，两者都正常跑到结束地址后比对最终内存与架构寄存器，不一致即记为候选 bug。
+
+# Cascade（测试用例为 RISC-V 可执行程序）
+
+<PaperCard
+  title="Cascade: CPU Fuzzing via Intricate Program Generation"
+  venue="USENIX Security"
+  year={2024}
+  authors="Flavien Solt, Katharina Ceesay-Seitz, Kaveh Razavi"
+  image="https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261103170403920.png"
+  paper="https://www.usenix.org/conference/usenixsecurity24/presentation/solt"
+/>
+
+## 问题
+
+**CPU 模糊测试本质上就是不断向 CPU 喂入指令序列**
+
+- 坏消息一：喂进去的程序，大部分根本没有被执行。
+- 坏消息二：就算触发了缺陷，也不知道到底出了什么问题。
+
+## 方法
+
+1. 程序由基本块组成，每个基本块以一条影响控制流的指令结尾并跳到下一个块，块在内存中随机布局、执行顺序与布局无关。控制流先被“预定”好，因此程序按构造即可完成。
+2. Cascade 让 ISS（spike）把整个中间程序跑一遍，采集数据流相关寄存器的值，然后按“依赖保持”原则生成 offset：随机选一个依赖寄存器 rd（值不可预知），再生成 roff，使 offset applier 指令（如 xor）的输出 rapp=rd⊕roff恰好等于跳转/访存所需的期望值 val。
+3. 由于控制流依赖数据流，一旦 CPU 在某些数据值上算错，控制流就会走偏，最终表现为程序不终止。因此只需在程序粒度上看“是否正常终止”，无需逐指令监控，设计上零运行时开销。
+4.  长程序难以人工分析，因此先用二分搜索找“最后一次被触发”的 tail 基本块与 tail 指令
 
