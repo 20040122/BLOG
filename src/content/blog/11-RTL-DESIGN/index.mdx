@@ -1,0 +1,76 @@
+---
+title: "面向 RTL 设计自身的缺陷 Fuzzing"
+summary: ""
+date: "2026-11-13"
+draft: false
+tags:
+  - FUZZ
+---
+
+import PaperCard from "@components/PaperCard.astro";
+
+## 思想
+
+面向真实 Verilog/SystemVerilog RTL 项目，通过自动生成、变异输入激励，结合硬件覆盖率反馈和功能正确性判定，发现 RTL 实现中的功能逻辑缺陷。
+
+**RTL 功能 Fuzzing**：固定被测 RTL 设计，变异输入事务、信号序列或指令，检测设计行为是否正确。
+
+| **维度**     | **要求**                                       |
+| ------------ | ---------------------------------------------- |
+| DUT 语言     | Verilog / SystemVerilog                        |
+| DUT 类型     | 已有的 RTL 模块、IP、处理器、SoC               |
+| 测试目标     | 找出 DUT 内的功能性错误                        |
+| Fuzzing 输入 | 引脚激励、多周期时序序列、协议事务或处理器指令 |
+| 测试执行     | Verilator、Icarus Verilog、VCS、Questa 等均可  |
+| 反馈机制     | RTL 覆盖率、状态覆盖率、功能覆盖率等           |
+
+![image-20261113150751790](https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261113150751790.png)
+
+## SystemVerilog 开源项目
+
+1. [OpenTitan](https://github.com/lowRISC/opentitan)：一套“图纸全公开的防黑客专用小芯片”。任何厂商都可以免费拿它的图纸去造芯片，装在手机、电脑或服务器里。每次开机时，这颗小芯片都会第一个启动，死死盯住设备里的软件，防止黑客在最底层搞破坏。
+2. [CVA6](https://github.com/openhwfoundation/cva6)：一款开源、支持 64 位（及 32 位）的 RISC-V 处理器核心。采用 SystemVerilog 编写，代码结构模块化、可配置性强。
+
+3. [CV32E40P](https://github.com/openhwfoundation/cv32e40p)：四级顺序执行流水线，SystemVerilog 实现，具有公开的 CORE-V 验证项目，适合进行跨设计测试生成实验。
+4. [Ibex](https://github.com/lowrisc/ibex)：原生 SystemVerilog，32 位 RISC-V 处理器，已有较成熟的验证基础设施，适合构建 LLM + RTL Fuzzing 原型。
+
+| 论文         | 年份 / 发表场所        | Ibex | CV32E40P | CVA6 | OpenTitan |
+| ------------ | ---------------------- | :--: | :------: | :--: | :-------: |
+| FLAME        | 2026 · IEEE TCAD       |  ✓   |    ✓     |  ✓   |     —     |
+| Si-ATLAS     | 2026 · ITC             |  —   |    ✓     |  —   |     —     |
+| VSpector     | 2026 · arXiv           |  —   |    —     |  ✓   |     —     |
+| SpecRead     | 2026 · arXiv           |  —   |    —     |  —   |     ✓     |
+| HWE-bench    | 2026 · Benchmark       |  ✓   |    —     |  ✓   |     ✓     |
+| SoCureLLM    | 2025 · IEEE HOST       |  ✓   |    ✓     |  ✓   |     —     |
+| SymbFuzz     | 2025 · MICRO           |  ✓   |    —     |  ✓   |    ✓*     |
+| InterConFuzz | 2025 · DAC             |  —   |    —     |  —   |     ✓     |
+| LASSO        | 2025 · MLCAD           |  —   |    —     |  —   |     ✓     |
+| DiveFuzz     | 2025 · ACM CCS         |  —   |    —     |  ✓   |     —     |
+| WhisperFuzz  | 2024 · USENIX Security |  —   |    —     |  ✓   |     —     |
+
+## 相关研究
+
+### FLAME
+
+<PaperCard
+  title="FLAME: Enhancing Functional Coverage in Processor Verification via Large Language Models"
+  venue="IEEE TCAD"
+  year={2026}
+  authors="Xiaopeng Li,Junjie Chen,Ming Yan..."
+  image="https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261114155720890.png"
+  paper="https://ieeexplore.ieee.org/document/11404211"
+/>
+
+
+
+### Si-ATLAS
+
+<PaperCard
+  title="Si-ATLAS: Autonomous Testing via LLM-Agent  Synergy for RISC-V SBST Generation"
+  venue="International Test Conference"
+  year={2026}
+  authors="Changhao Wang..."
+  image="https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261114160702819.png"
+  paper="https://iris.polito.it/handle/11583/3016158"
+/>
+
