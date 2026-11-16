@@ -67,10 +67,10 @@ const projects = (await getCollection("projects"))
           </p>
           <div id="ctaButtons" class='animated flex flex-wrap gap-4 justify-center mt-5'>
             <a href='/blog' class='py-2 px-4 rounded truncate text-xs md:text-sm lg:text-base bg-black dark:bg-white text-white dark:text-black hover:opacity-75 blend'>
-              Blog
+              BloG
             </a>
             <a href='/projects' class='py-2 px-4 truncate rounded text-xs md:text-sm lg:text-base border border-black/25 dark:border-white/25 hover:bg-black/5 hover:dark:bg-white/15 blend'>
-              Projects
+              ProJ
             </a>
           </div>
         </div>
@@ -143,19 +143,22 @@ const projects = (await getCollection("projects"))
           </p>
           <div class="grid grid-cols-4 gap-y-2 mt-4 auto-cols-min">
             {SOCIALS.map(social => (
-              <div class="col-span-1 flex items-center gap-1">
-                <span class="whitespace-nowrap truncate">
-                  {social.NAME}
-                </span>
-              </div>
-              <div class="col-span-3 truncate">
-                <a href={social.HREF} target="_blank" class="w-fit col-span-3 group flex gap-1 items-center underline decoration-[.5px] decoration-black/25 dark:decoration-white/50 hover:decoration-black dark:hover:decoration-white text-black dark:text-white underline-offset-2 blend">
-                  <span class="text-black/75 dark:text-white/75 group-hover:text-black group-hover:dark:text-white blend">
-                    {social.TEXT}
+              <>
+                <div class="col-span-1 flex items-center gap-1">
+                  <span class="whitespace-nowrap truncate">
+                    {social.NAME}
                   </span>
-                </a>
-              </div>
+                </div>
+                <div class="col-span-3 truncate">
+                  <a href={social.HREF} target="_blank" class="w-fit col-span-3 group flex gap-1 items-center underline decoration-[.5px] decoration-black/25 dark:decoration-white/50 hover:decoration-black dark:hover:decoration-white text-black dark:text-white underline-offset-2 blend">
+                    <span class="text-black/75 dark:text-white/75 group-hover:text-black group-hover:dark:text-white blend">
+                      {social.TEXT}
+                    </span>
+                  </a>
+                </div>
+              </>
             ))}
+          </div>
         </div>
       </section>
     </div>

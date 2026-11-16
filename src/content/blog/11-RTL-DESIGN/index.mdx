@@ -5,6 +5,7 @@ date: "2026-11-13"
 draft: false
 tags:
   - FUZZ
+  - RTL
 ---
 
 import PaperCard from "@components/PaperCard.astro";
@@ -34,20 +35,6 @@ import PaperCard from "@components/PaperCard.astro";
 3. [CV32E40P](https://github.com/openhwfoundation/cv32e40p)：四级顺序执行流水线，SystemVerilog 实现，具有公开的 CORE-V 验证项目，适合进行跨设计测试生成实验。
 4. [Ibex](https://github.com/lowrisc/ibex)：原生 SystemVerilog，32 位 RISC-V 处理器，已有较成熟的验证基础设施，适合构建 LLM + RTL Fuzzing 原型。
 
-| 论文         | 年份 / 发表场所        | Ibex | CV32E40P | CVA6 | OpenTitan |
-| ------------ | ---------------------- | :--: | :------: | :--: | :-------: |
-| FLAME        | 2026 · IEEE TCAD       |  ✓   |    ✓     |  ✓   |     —     |
-| Si-ATLAS     | 2026 · ITC             |  —   |    ✓     |  —   |     —     |
-| VSpector     | 2026 · arXiv           |  —   |    —     |  ✓   |     —     |
-| SpecRead     | 2026 · arXiv           |  —   |    —     |  —   |     ✓     |
-| HWE-bench    | 2026 · Benchmark       |  ✓   |    —     |  ✓   |     ✓     |
-| SoCureLLM    | 2025 · IEEE HOST       |  ✓   |    ✓     |  ✓   |     —     |
-| SymbFuzz     | 2025 · MICRO           |  ✓   |    —     |  ✓   |    ✓*     |
-| InterConFuzz | 2025 · DAC             |  —   |    —     |  —   |     ✓     |
-| LASSO        | 2025 · MLCAD           |  —   |    —     |  —   |     ✓     |
-| DiveFuzz     | 2025 · ACM CCS         |  —   |    —     |  ✓   |     —     |
-| WhisperFuzz  | 2024 · USENIX Security |  —   |    —     |  ✓   |     —     |
-
 ## 相关研究
 
 ### FLAME
@@ -61,16 +48,31 @@ import PaperCard from "@components/PaperCard.astro";
   paper="https://ieeexplore.ieee.org/document/11404211"
 />
 
+**问题：**
 
+处理器功能验证中功能覆盖率难以提升，如何自动覆盖那些在传统方法下"卡住"的功能点（FP）。"FP 瓶颈"问题：在约束随机验证（CRV）达到覆盖率增长平台期之后，仍有大量 FP 未被覆盖，而这些 FP 往往需要具备特定语义的测试用例才能触发。（只针对 CRV 已覆盖 6072 个点之后剩余的瓶颈 FP，以控制 LLM 的调用成本）
 
-### Si-ATLAS
+1. **FP 到指令的语义映射困难：** FP 是抽象的验证目标，要把它落地成具体指令需要同时理解 ISA 规范与处理器设计文档。
+2. **指令序列的有效性难以保证：** 指令之间存在复杂的依赖与执行顺序约束，LLM 容易产生幻觉，导致生成的测试用例语法错误或无法通过编译/仿真。
 
-<PaperCard
-  title="Si-ATLAS: Autonomous Testing via LLM-Agent  Synergy for RISC-V SBST Generation"
-  venue="International Test Conference"
-  year={2026}
-  authors="Changhao Wang..."
-  image="https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261114160702819.png"
-  paper="https://iris.polito.it/handle/11583/3016158"
-/>
+**方法：**
 
+1. **知识库构建：** 三类信息被收集并切块建索引，**处理器设计文档、FP 定义、ISA 规范**；前两者帮助 LLM 理解被测设计，后者帮助理解输入指令。
+
+2. **LLM 辅助测试生成（三阶段 CoT）：**
+
+   | 阶段 | 检索内容                     | 产出                           |
+   | ---- | ---------------------------- | ------------------------------ |
+   | 解释 | 目标 FP 的设计文档 + FP 定义 | FP 的详细语义与候选指令类型    |
+   | 分析 | 候选项在 ISA 规范中的用法    | 具体指令、参数、组合与操作模式 |
+   | 生成 | 前两阶段的结论               | 可编译为指令的 C 程序          |
+
+   FLAME 先用预建确定性索引做精确关键词查找，当出现命名不一致或多个近似匹配时，用 Levenshtein 编辑距离选出最相似的块。
+
+3. **功能覆盖引导的反馈：** C 程序经 **RISC-V GCC 编译为指令序列**，再用 Synopsys VCS 仿真；自动解析 EDA 工具生成的**覆盖报告**，识别未覆盖 FP；计算每个功能组（FG）内**未覆盖 FP 的比例**并排序，优先未覆盖点最多的组；历史用例中挑出能覆盖 **（与目标未覆盖 FP 同属一个 FG）** 的用例，作为 few-shot 反例促使 LLM 生成更多样的用例。
+
+**局限：**
+
+1. **覆盖率的绝对水平仍然很低。**  论文主要是**相对最优基线**的提升幅度（34.25%–220%），但未在正文中给出 FLAME 最终覆盖数占目标 FP 总量的比例。以 CVA6 为例可以自行推算Table I 给出23734个 FP，CRV覆盖6072 个后把它们排除，**剩余目标集约17662个**；而Section VI-B中CVA6上FLAME在 48 小时内覆盖 1319（GCC）到1367（LLVM）个 FP 。据此计算**约为目标集的 7–8%**。也就是说，"最好"是相对于同样受困的基线而言，绝大部分瓶颈FP依然未被拿下。
+2. **测试有效性仍明显低于传统方法。**  FLAME 的通过率为 69.42%、67.68%、52.86%、68.53%，而 CRV 与 Cascade 是 100%，传统方法依赖人工配置与规则化生成，但这意味着 FLAME 用有效性换取了语义覆盖能力。
+3. 只有四个开源 RISC-V 设计，无法代表其他架构或自定义扩展；更大的指令集还会带来 LLM 计算开销问题，作者把"**用 LLM 总结处理器信息以压缩提示约束**"列为未来工作。
