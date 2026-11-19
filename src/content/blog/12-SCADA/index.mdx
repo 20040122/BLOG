@@ -1,0 +1,210 @@
+---
+title: "测控代码生成模型-DAY01"
+summary: ""
+date: "2026-11-18"
+draft: false
+tags:
+  - SCADA
+---
+
+## 数据处理-思考
+
+1. 每一类语料对应一种安全规范md文档。
+2. MD 的示例 Prompt 对应为 instruction、伪 API CPP 映射为 output，组装成Alpaca JSON。
+3. 微调 qwen-2.5-coder-7B-instruct 模型使用的 SFT 数据格式（需要考虑转成 jsonl 格式微调）：
+
+```json
+[
+  {
+    "instruction": "编写SCADA C++脚本，读取当前设备的A、B两个double属性，计算算术平均值，并将结果写入Avg属性。要求检查对象指针、属性读取结果和数值有效性，读取失败或数值无效时不更新Avg。",
+    "output": "void ScriptBody(IScadaObject* me, ProjectContext* ctx, int eventType)\n{\n    if (me == nullptr) return;\n\n    double a = 0.0;\n    double b = 0.0;\n\n    if (!me->GetPropDouble(\"A\", a)) return;\n    if (!me->GetPropDouble(\"B\", b)) return;\n\n    if (!std::isfinite(a) || !std::isfinite(b)) return;\n\n    double avg = a / 2.0 + b / 2.0;\n    if (!std::isfinite(avg)) return;\n\n    me->SetPropDouble(\"Avg\", avg);\n}"
+  }
+]
+```
+
+4. 模型输入结构：
+   ![已粘贴 2026-11-19 09.05.32](https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/%E5%B7%B2%E7%B2%98%E8%B4%B4%202026-11-19%2009.05.32.png)
+
+5. 工作拆分为：微调阶段 + 推理阶段
+
+- 微调阶段：Instruction → 伪 API C++ Output
+- 推理阶段：System + 真实 API RAG + 业务样例 RAG + 安全规范 RAG + 用户需求 + 输出约束 → 真实 API C++
+
+6. Zero-shot 实验
+
+- system_prompt:
+
+```text
+你是一名SCADA 脚本代码生成助手。
+
+根据用户提供的自然语言业务需求，生成脚本。
+
+要求：
+1. 使用C/C++语言。
+2. 生成完整的脚本函数定义。
+3. 不包含#include和main函数。
+4. 使用对象指针前必须判空。
+5. 属性读取失败时不得继续计算。
+6. 必须过滤NaN和Inf。
+7. 禁止阻塞执行。
+8. 只输出代码，不输出解释或Markdown代码块。
+
+脚本函数签名：
+void ScriptBody(
+    IScadaObject* me,
+    ProjectContext* ctx,
+    int eventType
+)
+
+如果缺少必要的接口定义，不得编造API。
+输出ERROR: MISSING_API_CONTEXT。
+```
+
+- user_prompt:
+
+```
+请生成一个SCADA C++脚本。
+
+业务需求：
+读取当前设备的A和B两个double类型属性，
+计算它们的算术平均值，
+将计算结果写入当前设备的Avg属性。
+
+运行环境：
+- me表示当前设备。
+- ctx表示项目上下文，本任务不需要使用。
+- eventType表示脚本触发类型。
+
+安全要求：
+- 读取失败时不得修改Avg。
+- 输入数值无效时不得修改Avg。
+- 不允许阻塞执行。
+```
+
+7. API-conditioned Zero-shot
+
+- system_prompt:
+
+```text
+你是一名SCADA C++脚本代码生成助手。
+
+你的任务是根据用户的自然语言需求，
+使用提供的SCADA API生成C++脚本。
+
+【API约束】
+1. 只能调用当前提供的API。
+2. 禁止编造API名称、参数及返回值。
+3. 不得使用未提供的SCADA接口。
+4. 如果缺少必要API，输出：
+ERROR: MISSING_API_CONTEXT
+
+【安全约束】
+1. 使用对象指针前必须判空。
+2. 属性读取必须检查返回状态。
+3. 必须过滤NaN和Inf。
+4. 计算结果必须有效。
+5. 禁止阻塞执行。
+6. 不得写入无效数据。
+
+【输出约束】
+1. 仅输出完整C++函数定义。
+2. 函数名称固定为ScriptBody。
+3. 不包含#include和main函数。
+4. 不包含Markdown代码块。
+5. 保留必要的中文注释。
+```
+
+- user_prompt:
+
+```text
+[API_CONTEXT]
+
+以下为本次实验允许使用的伪API：
+
+1. 读取double属性
+
+bool IScadaObject::GetPropDouble(
+    const char* propertyName,
+    double& value
+);
+
+功能：
+读取当前设备指定的double属性。
+
+返回值：
+true表示读取成功。
+false表示读取失败。
+
+2. 写入double属性
+
+void IScadaObject::SetPropDouble(
+    const char* propertyName,
+    double value
+);
+
+功能：
+向当前设备写入指定double属性。
+
+注意：
+上述接口为本次实验的伪API契约，
+不代表真实SCADA SDK。
+
+[SAFETY_CONTEXT]
+
+RULE-PTR-001：
+使用me指针前必须判空。
+
+RULE-IO-001：
+读取属性后必须检查返回值。
+
+RULE-NUM-001：
+必须过滤NaN和Inf。
+
+RULE-NUM-002：
+不得写入无效计算结果。
+
+RULE-EXEC-001：
+禁止使用Sleep等阻塞操作。
+
+[USER_REQUEST]
+
+业务名称：
+同一设备双属性求平均值。
+
+业务需求：
+读取当前设备的A、B两个double属性，
+计算算术平均值，
+将结果写入Avg属性。
+
+运行对象：
+me为当前设备。
+
+触发方式：
+定时订阅。
+
+异常处理：
+- me为空时直接返回。
+- A或B读取失败时直接返回。
+- A或B为NaN或Inf时直接返回。
+- 计算结果无效时不得写入Avg。
+
+[OUTPUT_REQUIREMENTS]
+
+输出函数签名：
+
+void ScriptBody(
+    IScadaObject* me,
+    ProjectContext* ctx,
+    int eventType
+)
+
+只输出C++代码。
+不输出解释。
+```
+
+## 合成数据生成-思考
+
+1. 目前有两个 demo 的代码和文档，用 AI 根据规范大量生成。
+2. Few-shot 方式生成
+
+![image-20261119091000819](https://230-blog-img.oss-cn-beijing.aliyuncs.com/img/image-20261119091000819.png)
