@@ -1,0 +1,68 @@
+---
+title: "测控代码生成模型-DAY02"
+summary: ""
+date: "2026-11-19"
+draft: false
+tags:
+  - SCADA
+---
+
+## 生成语料库-思考
+1. SFT 数据格式更改为只输出函数体。
+```json
+{
+  "instruction": "读取属性 A 和 B，计算平均值并写入 Avg。读取失败或结果无效时不写入。",
+  "output": "double a = 0.0;\ndouble b = 0.0;\nif (!me->ReadDouble(\"A\", a)) return;\nif (!me->ReadDouble(\"B\", b)) return;\ndouble avg = (a + b) / 2.0;\nif (!std::isfinite(avg)) return;\nif (!me->WriteDouble(\"Avg\", avg)) return;"
+}
+```
+2. 三种 Prompt 对应一份函数体。
+3. 应该先生成一个业务的语料。
+4. 需要语料资源
+
+| 类型                       | 用途                      |
+| ------------------------ | ----------------------- |
+| 每种业务对应的伪 API 代码          | 微调数据的"output"字段         |
+| 每种伪 API 代码对应的 3 种 prompt | 微调数据的"instruction"字段    |
+| 每种业务对应的真 API 代码          | 构建 RAG 环节的"Case-Wiki"   |
+| 真 API 接口                 | 构建 RAG 环节的"API-Wiki"    |
+| 安全规范需求                   | 构建 RAG 环节的"Safety-Wiki" |
+5. ！！！ 根据[[语料库-V2.0]]和[[API]]可以构建出真 API 代码。（先解析出每个业务的要求，提取出真 API 接口）
+6. 制定伪 API 接口映射规则，方便生成伪 API 代码。
+7. 真 API 代码生成流程
+从[[语料库-V2.0]]提取出每个业务的业务需求规格YAML
+```YAML
+business_id: DP-01
+business_name: DualPropAverage
+object_type: device
+
+inputs:
+  - name: A
+    type: double
+  - name: B
+    type: double
+
+output:
+  name: Avg
+  type: double
+
+operation: average
+
+constraints:
+  - check_me_null
+  - check_read_success
+  - check_finite_values
+  - check_output_range
+  - check_write_success
+  - log_failure_only
+
+forbidden_behaviors:
+  - alarm
+  - delay
+```
+输入 API-Wiki 当作上下文，从 [[语料库-编写规范]] 提取到适合业务的规则，最后生成代码和适合的 3 个 Prompt。
+8. 搭建了生成数据的流程。
+   
+
+## RAG-思考
+**流程**：LLM-Wiki 生成Markdown → Python 分类检索 → 原始文档核对 → Prompt组装 → Qwen 生成
+1. llm-wiki的`purpose.md`（这个知识库研究什么？哪些内容值得保留？希望最终如何使用这些知识？）和`schema.md`（重点是告诉 LLM 如何将原始资料转化为结构化知识）应该如何写？
