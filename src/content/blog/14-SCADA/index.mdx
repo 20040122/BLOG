@@ -1,0 +1,523 @@
+---
+title: "测控代码生成模型-DAY03"
+summary: ""
+date: "2026-11-20"
+draft: false
+tags:
+  - SCADA
+---
+DP-01 全流程
+## 1-业务描述
+   双属性求平均值（DP-01）
+   - **功能描述**：双属性求平均值。
+   - **输入与对象**：me 为设备；读 A、B，写 Avg。
+   - **接口使用**：`TryGetProVal<double>` 两次、`SetProVal<double>` 一次。
+   - **边界要求**：任一读取失败不计算不写入；计算前过滤非有限值；结果超量程不写入。
+   - **设计约束**：不报警、不延时；属性名以常量给出；日志仅记录失败点。
+## 2-构建真 API 代码
+根据描述、编写规范、API 文档，构建真 API CPP 函数体代码 `001_DP_DualPropAverage.cpp`
+```cpp
+{
+constexpr const char *kPropA = "A";
+constexpr const char *kPropB = "B";
+constexpr const char *kPropAvg = "Avg";
+constexpr double kDoubleMax = std::numeric_limits<double>::max();
+// 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。
+constexpr double kAvgMin = -kDoubleMax;
+constexpr double kAvgMax = kDoubleMax;
+static_assert(kAvgMin >= -kDoubleMax && kAvgMax <= kDoubleMax &&
+kAvgMin <= kAvgMax, "Invalid Avg range");
+if (!ctx) {
+return;
+}
+if (!me) {
+ctx->Log("求平均值失败：当前设备为空");
+return;
+}
+double a = 0.0;
+if (!me->TryGetProVal<double>(kPropA, a)) {
+ctx->Log("设备 {} 读取 {} 失败", me->GetId(), kPropA);
+return;
+}
+double b = 0.0;
+if (!me->TryGetProVal<double>(kPropB, b)) {
+ctx->Log("设备 {} 读取 {} 失败", me->GetId(), kPropB);
+return;
+}
+if (!std::isfinite(a) || !std::isfinite(b)) {
+ctx->Log("设备 {} 输入非有限：A={}，B={}", me->GetId(), a, b);
+return;
+}
+constexpr double kHalfMax = kDoubleMax / 2.0;
+// 幅值过大时先折半，避免计算中间和时溢出。
+const double avg = (std::abs(a) > kHalfMax || std::abs(b) > kHalfMax)
+? a / 2.0 + b / 2.0
+: (a + b) / 2.0;
+if (!std::isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {
+ctx->Log("设备 {} 平均值无效或超量程：Avg={}", me->GetId(), avg);
+return;
+}
+if (!me->SetProVal<double>(kPropAvg, avg)) {
+ctx->Log("设备 {} 写入 {} 失败，写入值={}", me->GetId(), kPropAvg, avg);
+return;
+}
+}
+```
+## 3-真 API 与伪 API
+ 1. 制定`Pseudo-API-Spec.md`伪 API 接口规范
+ 2. 根据映射规范，生成伪 API 代码`001_DP_DualPropAverage_fake.cpp`
+```cpp
+{
+constexpr const char *kPropA = "A";
+constexpr const char *kPropB = "B";
+constexpr const char *kPropAvg = "Avg";
+constexpr double kDoubleMax = std::numeric_limits<double>::max();
+// 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。
+constexpr double kAvgMin = -kDoubleMax;
+constexpr double kAvgMax = kDoubleMax;
+static_assert(kAvgMin >= -kDoubleMax && kAvgMax <= kDoubleMax &&
+kAvgMin <= kAvgMax, "Invalid Avg range");
+if (!ctx) {
+return;
+}
+if (!me) {
+WriteLog(ctx, "求平均值失败：当前设备为空");
+return;
+}
+double a = 0.0;
+if (!ReadProperty<double>(me, kPropA, a)) {
+WriteLog(ctx, "设备 {} 读取 {} 失败", ObjectId(me), kPropA);
+return;
+}
+double b = 0.0;
+if (!ReadProperty<double>(me, kPropB, b)) {
+WriteLog(ctx, "设备 {} 读取 {} 失败", ObjectId(me), kPropB);
+return;
+}
+if (!std::isfinite(a) || !std::isfinite(b)) {
+WriteLog(ctx, "设备 {} 输入非有限：A={}，B={}", ObjectId(me), a, b);
+return;
+}
+constexpr double kHalfMax = kDoubleMax / 2.0;
+// 幅值过大时先折半，避免计算中间和时溢出。
+const double avg = (std::abs(a) > kHalfMax || std::abs(b) > kHalfMax)
+? a / 2.0 + b / 2.0
+: (a + b) / 2.0;
+if (!std::isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {
+WriteLog(ctx, "设备 {} 平均值无效或超量程：Avg={}", ObjectId(me), avg);
+return;
+}
+if (!WriteProperty<double>(me, kPropAvg, avg)) {
+WriteLog(ctx, "设备 {} 写入 {} 失败，写入值={}", ObjectId(me), kPropAvg, avg);
+return;
+}
+}
+## 4-扩充语料库
+将伪 API CPP 代码等价翻译为对应的 C 代码`001_DP_DualPropAverage_fake.c`
+```c
+{
+const char *const kPropA = "A";
+const char *const kPropB = "B";
+const char *const kPropAvg = "Avg";
+const double kDoubleMax = DBL_MAX;
+// 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。
+const double kAvgMin = -kDoubleMax;
+const double kAvgMax = kDoubleMax;
+if (!ctx) {
+return;
+}
+if (!me) {
+WriteLog(ctx, "求平均值失败：当前设备为空");
+return;
+}
+// C 的 _Static_assert 只接受整数常量表达式，浮点量程的编译期校验改为运行时校验。
+if (kAvgMin < -kDoubleMax || kAvgMax > kDoubleMax || kAvgMin > kAvgMax) {
+WriteLog(ctx, "求平均值失败：Avg 量程常量配置非法");
+return;
+}
+double a = 0.0;
+if (!ReadPropertyDouble(me, kPropA, &a)) {
+WriteLog(ctx, "设备 {} 读取 {} 失败", ObjectId(me), kPropA);
+return;
+}
+double b = 0.0;
+if (!ReadPropertyDouble(me, kPropB, &b)) {
+WriteLog(ctx, "设备 {} 读取 {} 失败", ObjectId(me), kPropB);
+return;
+}
+if (!isfinite(a) || !isfinite(b)) {
+WriteLog(ctx, "设备 {} 输入非有限：A={}，B={}", ObjectId(me), a, b);
+return;
+}
+const double kHalfMax = kDoubleMax / 2.0;
+// 幅值过大时先折半，避免计算中间和时溢出。
+const double avg = (fabs(a) > kHalfMax || fabs(b) > kHalfMax)
+? a / 2.0 + b / 2.0
+: (a + b) / 2.0;
+if (!isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {
+WriteLog(ctx, "设备 {} 平均值无效或超量程：Avg={}", ObjectId(me), avg);
+return;
+}
+if (!WritePropertyDouble(me, kPropAvg, avg)) {
+WriteLog(ctx, "设备 {} 写入 {} 失败，写入值={}", ObjectId(me), kPropAvg, avg);
+return;
+}
+}
+```
+## 5-构建微调数据集
+数据规模 510 条；分为两组（C/C++），每组三份。
+
+`cpp`
+```jsonl
+{"instruction":"请使用 C++ 脚本完成以下需求：计算当前设备属性 `A` 和 `B` 的平均值并写入 `Avg`。任一输入读取失败、输入非有限或结果超量程时，保留原值。","output":"{\n constexpr const char *kPropA = \"A\";\n constexpr const char *kPropB = \"B\";\n constexpr const char *kPropAvg = \"Avg\";\n\n constexpr double kDoubleMax = std::numeric_limits<double>::max();\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n constexpr double kAvgMin = -kDoubleMax;\n constexpr double kAvgMax = kDoubleMax;\n static_assert(kAvgMin >= -kDoubleMax && kAvgMax <= kDoubleMax &&\n kAvgMin <= kAvgMax, \"Invalid Avg range\");\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n\n double a = 0.0;\n if (!ReadProperty<double>(me, kPropA, a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadProperty<double>(me, kPropB, b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!std::isfinite(a) || !std::isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n constexpr double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (std::abs(a) > kHalfMax || std::abs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!std::isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WriteProperty<double>(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+
+{"instruction":"请使用 C++ 脚本完成以下需求：这台设备有两路采集值 `A` 和 `B`，哪一路更新都重新读一遍两路，把平均值存到 `Avg`。有一路读不到、读到的值不是有限数，或者算出来超过 `Avg` 的量程，就让 `Avg` 保持原样。成功时不用打日志，出错时只记失败原因，别发报警，也别加延时。","output":"{\n constexpr const char *kPropA = \"A\";\n constexpr const char *kPropB = \"B\";\n constexpr const char *kPropAvg = \"Avg\";\n\n constexpr double kDoubleMax = std::numeric_limits<double>::max();\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n constexpr double kAvgMin = -kDoubleMax;\n constexpr double kAvgMax = kDoubleMax;\n static_assert(kAvgMin >= -kDoubleMax && kAvgMax <= kDoubleMax &&\n kAvgMin <= kAvgMax, \"Invalid Avg range\");\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n\n double a = 0.0;\n if (!ReadProperty<double>(me, kPropA, a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadProperty<double>(me, kPropB, b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!std::isfinite(a) || !std::isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n constexpr double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (std::abs(a) > kHalfMax || std::abs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!std::isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WriteProperty<double>(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+
+{"instruction":"请使用 C++ 脚本完成以下需求：生成 SCADA 事件订阅脚本的函数体。由平台将脚本绑定到当前设备属性 `A` 或 `B` 的变化事件。`me` 为当前设备，`ctx` 用于失败日志。`ctx` 为空时直接退出，`me` 为空时记录失败并退出。\n\n用常量定义属性名 `A`、`B` 和 `Avg`。使用 `ReadProperty<double>` 分别读取两个输入，均读取成功且为有限值时才计算算术平均值，并避免中间求和溢出。`Avg` 的工程量程上下限用常量给出，未提供时采用 `std::numeric_limits<double>::max()` 表示的有限范围，并使用 `static_assert` 校验量程常量。结果非有限或超量程时记日志并退出，保留原值。\n\n其余情况下使用 `WriteProperty<double>` 写入 `Avg` 一次并检查返回值，写入失败则记录并退出。使用 `WriteLog` 仅记录失败，设备可用时使用 `ObjectId` 标识设备。使用 `std::isfinite` 和 `std::abs` 进行数值检查与计算。禁止报警和延时。","output":"{\n constexpr const char *kPropA = \"A\";\n constexpr const char *kPropB = \"B\";\n constexpr const char *kPropAvg = \"Avg\";\n\n constexpr double kDoubleMax = std::numeric_limits<double>::max();\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n constexpr double kAvgMin = -kDoubleMax;\n constexpr double kAvgMax = kDoubleMax;\n static_assert(kAvgMin >= -kDoubleMax && kAvgMax <= kDoubleMax &&\n kAvgMin <= kAvgMax, \"Invalid Avg range\");\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n\n double a = 0.0;\n if (!ReadProperty<double>(me, kPropA, a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadProperty<double>(me, kPropB, b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!std::isfinite(a) || !std::isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n constexpr double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (std::abs(a) > kHalfMax || std::abs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!std::isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WriteProperty<double>(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+```
+
+`c`
+```jsonl
+{"instruction":"请使用 C 脚本完成以下需求：计算当前设备属性 `A` 和 `B` 的平均值并写入 `Avg`。任一输入读取失败、输入非有限或结果超量程时，保留原值。","output":"{\n const char *const kPropA = \"A\";\n const char *const kPropB = \"B\";\n const char *const kPropAvg = \"Avg\";\n\n const double kDoubleMax = DBL_MAX;\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n const double kAvgMin = -kDoubleMax;\n const double kAvgMax = kDoubleMax;\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n // C 的 _Static_assert 只接受整数常量表达式，浮点量程的编译期校验改为运行时校验。\n if (kAvgMin < -kDoubleMax || kAvgMax > kDoubleMax || kAvgMin > kAvgMax) {\n WriteLog(ctx, \"求平均值失败：Avg 量程常量配置非法\");\n return;\n }\n\n double a = 0.0;\n if (!ReadPropertyDouble(me, kPropA, &a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadPropertyDouble(me, kPropB, &b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!isfinite(a) || !isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n const double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (fabs(a) > kHalfMax || fabs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WritePropertyDouble(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+
+{"instruction":"请使用 C 脚本完成以下需求：这台设备有两路采集值 `A` 和 `B`，哪一路更新都重新读一遍两路，把平均值存到 `Avg`。有一路读不到、读到的值不是有限数，或者算出来超过 `Avg` 的量程，就让 `Avg` 保持原样。成功时不用打日志，出错时只记失败原因，别发报警，也别加延时。","output":"{\n const char *const kPropA = \"A\";\n const char *const kPropB = \"B\";\n const char *const kPropAvg = \"Avg\";\n\n const double kDoubleMax = DBL_MAX;\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n const double kAvgMin = -kDoubleMax;\n const double kAvgMax = kDoubleMax;\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n // C 的 _Static_assert 只接受整数常量表达式，浮点量程的编译期校验改为运行时校验。\n if (kAvgMin < -kDoubleMax || kAvgMax > kDoubleMax || kAvgMin > kAvgMax) {\n WriteLog(ctx, \"求平均值失败：Avg 量程常量配置非法\");\n return;\n }\n\n double a = 0.0;\n if (!ReadPropertyDouble(me, kPropA, &a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadPropertyDouble(me, kPropB, &b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!isfinite(a) || !isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n const double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (fabs(a) > kHalfMax || fabs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WritePropertyDouble(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+
+{"instruction":"请使用 C 脚本完成以下需求：生成 SCADA 事件订阅脚本的函数体。由平台将脚本绑定到当前设备属性 `A` 或 `B` 的变化事件。`me` 为当前设备，`ctx` 用于失败日志。`ctx` 为空时直接退出，`me` 为空时记录失败并退出。\n\n用常量定义属性名 `A`、`B` 和 `Avg`。使用 `ReadPropertyDouble` 分别读取两个输入，通过输出参数获取属性值，均读取成功且为有限值时才计算算术平均值，并避免中间求和溢出。`Avg` 的工程量程上下限用常量给出，未提供时采用 `DBL_MAX` 表示的 `double` 有限范围，并在运行时检查量程配置合法性。结果非有限或超量程时记日志并退出，保留原值。\n\n其余情况下使用 `WritePropertyDouble` 写入 `Avg` 一次并检查返回值，写入失败则记录并退出。使用 `WriteLog` 仅记录失败，设备可用时使用 `ObjectId` 标识设备。使用 C 风格的 `isfinite` 和 `fabs` 进行数值检查与计算，不使用 C++ 模板接口。禁止报警和延时。","output":"{\n const char *const kPropA = \"A\";\n const char *const kPropB = \"B\";\n const char *const kPropAvg = \"Avg\";\n\n const double kDoubleMax = DBL_MAX;\n // 若项目定义了 Avg 的工程量程，将这两个常量替换为其上下限。\n const double kAvgMin = -kDoubleMax;\n const double kAvgMax = kDoubleMax;\n\n if (!ctx) {\n return;\n }\n if (!me) {\n WriteLog(ctx, \"求平均值失败：当前设备为空\");\n return;\n }\n // C 的 _Static_assert 只接受整数常量表达式，浮点量程的编译期校验改为运行时校验。\n if (kAvgMin < -kDoubleMax || kAvgMax > kDoubleMax || kAvgMin > kAvgMax) {\n WriteLog(ctx, \"求平均值失败：Avg 量程常量配置非法\");\n return;\n }\n\n double a = 0.0;\n if (!ReadPropertyDouble(me, kPropA, &a)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropA);\n return;\n }\n double b = 0.0;\n if (!ReadPropertyDouble(me, kPropB, &b)) {\n WriteLog(ctx, \"设备 {} 读取 {} 失败\", ObjectId(me), kPropB);\n return;\n }\n if (!isfinite(a) || !isfinite(b)) {\n WriteLog(ctx, \"设备 {} 输入非有限：A={}，B={}\", ObjectId(me), a, b);\n return;\n }\n\n const double kHalfMax = kDoubleMax / 2.0;\n // 幅值过大时先折半，避免计算中间和时溢出。\n const double avg = (fabs(a) > kHalfMax || fabs(b) > kHalfMax)\n ? a / 2.0 + b / 2.0\n : (a + b) / 2.0;\n if (!isfinite(avg) || avg < kAvgMin || avg > kAvgMax) {\n WriteLog(ctx, \"设备 {} 平均值无效或超量程：Avg={}\", ObjectId(me), avg);\n return;\n }\n if (!WritePropertyDouble(me, kPropAvg, avg)) {\n WriteLog(ctx, \"设备 {} 写入 {} 失败，写入值={}\", ObjectId(me), kPropAvg, avg);\n return;\n }\n}"}
+```
+
+
+## 6-推理阶段
+代码组成：model.py、prompts.py、rag.py、run.py。
+- run.py:程序总的执行入口，输入用户的需求；
+- rag.py:根据需求检索case_context、api_context、safety_context；拼入json文件
+- prompts.py:进行提示词装配；
+- model.py:本地模型推理代码。
+
+提示词组成：system_prompt、user_prompt(request、case_context、api_context、safety_context)
+- system_prompt
+```text
+你是 SCADA 工业监控系统的脚本代码生成助手。
+
+任务：
+根据用户提供的业务需求和可选上下文，
+生成符合项目规范的 C 或 C++ 脚本。
+
+要求：
+1. 严格使用用户指定的编程语言。
+2. 仅输出脚本函数体，包含最外层花括号。
+3. 不输出函数签名、main 函数或 Markdown 标记。
+4. 设备对象为 me，运行上下文为 ctx。
+5. 仅使用项目定义的伪 API。
+6. 不得自行编造接口。
+7. 属性读取、写入必须检查执行结果。
+8. 发生错误时遵循安全上下文要求。
+9. 不添加未要求的报警、延时或其他业务操作。
+10. C 脚本不得使用 C++ 模板、命名空间等语法。
+11. C++ 脚本不得混用仅为 C 定义的接口。
+12. 如果上下文存在冲突，以明确的业务约束和
+    当前语言对应的接口规范为准。
+
+仅返回代码。
+```
+- user_prompt(request)
+```text
+请使用 C++ 脚本完成以下需求：
+
+当前设备有两个属性 A 和 B。
+当任意一个属性变化时，读取两个属性，
+计算平均值并写入 Avg。
+
+如果读取失败、输入不是有限数或结果超出量程，
+则不修改 Avg。
+
+不需要报警或延时。
+```
+- user_prompt(case_context)
+```text
+参考业务：双属性计算类脚本
+
+对象类型：device
+输入：两个 double 属性
+输出：一个 double 属性
+
+处理流程：
+1. 检查运行上下文和设备对象。
+2. 读取两个输入属性。
+3. 检查读取结果。
+4. 检查数值有效性。
+5. 执行计算。
+6. 检查结果量程。
+7. 写入输出属性。
+8. 检查写入结果。
+
+失败时保留原输出属性。
+```
+- user_prompt(api_context)
+```text
+当前任务必须使用 SCADA 平台真实 API。
+
+对象：
+- me：当前设备对象
+- ctx：脚本运行上下文
+
+真实 API：
+
+1. me->TryGetProVal<double>(propertyName, output)
+   功能：读取当前设备的 double 属性
+   返回值：bool
+   约束：必须检查读取结果
+
+2. me->SetProVal<double>(propertyName, value)
+   功能：写入当前设备的 double 属性
+   返回值：bool
+   约束：必须检查写入结果
+
+3. me->GetId()
+   功能：获取当前设备标识
+
+4. ctx->Log(format, ...)
+   功能：记录日志
+
+禁止使用以下伪 API：
+- ReadProperty<double>
+- WriteProperty<double>
+- ObjectId
+- WriteLog
+
+最终输出必须使用上述真实 API。
+```
+- user_prompt(safety_context)
+```text
+安全规则：
+
+S01：ctx 为空时直接退出。
+S02：me 为空时记录失败并退出。
+S03：任一属性读取失败，不得写入输出。
+S04：输入必须为有限数。
+S05：平均值计算应避免中间求和溢出。
+S06：结果必须为有限数且满足输出量程。
+S07：写入操作必须检查返回值。
+S08：成功路径不记录日志。
+S09：禁止额外报警和延时。
+```
+## 7-实验
+
+| 实验组 | 上下文                                         | 验证目标            |
+| --- | ------------------------------------------- | --------------- |
+| E0  | `request`                                   | 模型是否直接生成伪 API   |
+| E1  | `request + case_context`                    | 案例能否帮助业务迁移      |
+| E2  | `request + 真实 api_context`                  | 模型能否自主迁移到真实 API |
+| E3  | `request + 真实 api_context + safety_context` | 安全规则是否提升代码质量    |
+| E4  | 全部四种上下文                                     | 完整推理效果          |
+- E0
+```cpp
+{
+    float valueA, valueB;
+    if (me->readAttribute("A", &valueA) != 0 || !std::isfinite(valueA)) {
+        return;
+    }
+    if (me->readAttribute("B", &valueB) != 0 || !std::isfinite(valueB)) {
+        return;
+    }
+    float avg = (valueA + valueB) / 2.0f;
+    if (avg < ctx->minAvg || avg > ctx->maxAvg) {
+        return;
+    }
+    if (me->writeAttribute("Avg", avg) != 0) {
+        return;
+    }
+}
+```
+- E1
+```cpp
+{
+    // 读取属性 A 和 B
+    double attrA, attrB;
+    if (!ctx->readAttribute(me, "A", &attrA) || !ctx->readAttribute(me, "B", &attrB)) {
+        return; // 读取失败，不进行后续操作
+    }
+
+    // 计算平均值
+    double avg = (attrA + attrB) / 2.0;
+
+    // 检查数值有效性
+    if (!std::isfinite(avg)) {
+        return; // 输入不是有限数，不进行后续操作
+    }
+
+    // 检查结果量程（假设量程为 -100 到 100）
+    if (avg < -100 || avg > 100) {
+        return; // 结果超出量程，不进行后续操作
+    }
+
+    // 写入输出属性 Avg
+    if (!ctx->writeAttribute(me, "Avg", avg)) {
+        return; // 写入失败，不进行后续操作
+    }
+}
+```
+- E2
+```cpp
+{
+    double A, B;
+    if (me->TryGetProVal<double>("A", A) && me->TryGetProVal<double>("B", B)) {
+        double Avg = (A + B) / 2.0;
+        if (std::isfinite(Avg) && Avg >= -1000.0 && Avg <= 1000.0) {
+            if (!me->SetProVal<double>("Avg", Avg)) {
+                ctx->Log("Failed to write Avg for device %s", me->GetId().c_str());
+            }
+        } else {
+            ctx->Log("Invalid Avg value for device %s", me->GetId().c_str());
+        }
+    } else {
+        ctx->Log("Failed to read properties for device %s", me->GetId().c_str());
+    }
+}
+```
+- E3
+```cpp
+{
+    if (ctx == nullptr) {
+        return;
+    }
+
+    if (me == nullptr) {
+        ctx->Log("Error: me is null");
+        return;
+    }
+
+    double A, B;
+    bool successA = me->TryGetProVal<double>("A", A);
+    bool successB = me->TryGetProVal<double>("B", B);
+
+    if (!successA || !successB) {
+        ctx->Log("Error: Failed to read properties A or B");
+        return;
+    }
+
+    if (!std::isfinite(A) || !std::isfinite(B)) {
+        ctx->Log("Error: Input values are not finite numbers");
+        return;
+    }
+
+    double avg = (A + B) / 2.0;
+
+    if (!std::isfinite(avg)) {
+        ctx->Log("Error: Result is not a finite number");
+        return;
+    }
+
+    bool successWrite = me->SetProVal<double>("Avg", avg);
+
+    if (!successWrite) {
+        ctx->Log("Error: Failed to write to property Avg");
+    }
+}
+```
+- E4
+```cpp
+{
+    if (ctx == nullptr) return;
+    if (me == nullptr) {
+        ctx->Log("Error: me is null");
+        return;
+    }
+
+    double A, B;
+    if (!me->TryGetProVal<double>("A", A)) {
+        ctx->Log("Error: Failed to read property A");
+        return;
+    }
+    if (!me->TryGetProVal<double>("B", B)) {
+        ctx->Log("Error: Failed to read property B");
+        return;
+    }
+
+    if (!std::isfinite(A) || !std::isfinite(B)) {
+        ctx->Log("Error: Input values are not finite");
+        return;
+    }
+
+    double Avg = (A + B) / 2.0;
+    if (!std::isfinite(Avg)) {
+        ctx->Log("Error: Result is not finite");
+        return;
+    }
+
+    if (!me->SetProVal<double>("Avg", Avg)) {
+        ctx->Log("Error: Failed to write property Avg");
+        return;
+    }
+}
+```
+# 当前难点
+## 1-如何构建三种 Wiki ？
+```text
+# SCADA Wiki — Schema
+
+## 全局规范
+
+- `raw/sources/api/`：API 知识。
+- `raw/sources/case/`：业务案例。
+- `raw/sources/safety/`：安全规则。
+- entities 存储实体，concepts 存储功能主题。
+- 文件名采用小写英文及连字符。
+- Frontmatter 包含 type、title、tags、sources、domain。
+- domain 根据来源目录设为 api、case 或 safety。
+- 使用 Wikilink 建立关联，保留来源，禁止编造。
+
+## API Wiki
+
+- 一个 API 方法一页，合并全部重载。
+- 对象类型、数据结构独立成页。
+- 按业务操作建立功能主题。
+- 文件名以 `api-` 为前缀。
+
+页面包含：功能、签名、参数、返回值、调用约束、关联知识、来源。
+
+保留原始签名及类型，补充中文检索关键词。未定义行为标记 unknown，未正式声明的接口标记 unverified。
+
+## Case Wiki
+来源：raw/sources/case/，保留原始业务 YAML。
+
+一个 business_id 对应一个实体页。
+
+文件名：case-{business_id}.md，统一小写。
+
+Frontmatter 保留 business_id、domain、kind。
+
+保留全部业务字段及约束。
+
+提取通用业务模式，建立 Concept。
+
+使用 Wikilink 关联案例、API 和安全规则。
+
+禁止编造业务逻辑或混淆案例约束。
+
+相同 business_id 更新已有页面。
+## Safety Wiki
+
+一条安全规则一页，保留原始 rule_id。
+
+文件名采用 safety-{category}-{number}.md。
+
+按风险类别建立功能主题。
+
+Frontmatter 增加 rule_id、category、operations、apis、data_types。
+
+匹配字段使用数组，保留原始标识，空值使用 []。
+
+关联对应 API 实体，不包含全局及业务专属约束。
+
+页面包含：适用条件、规则与失败处理、关联知识、来源。
+
+
+## Ingest 规则
+
+- 按源文件分批导入。
+- 依据来源目录确定知识域。
+- 增量更新已有页面及索引，避免重复。
+- 不生成 TODO 知识，保持内容精简。
+
+```
+## 2-如何利用三种 Wiki ？
